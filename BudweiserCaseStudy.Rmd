@@ -1,0 +1,168 @@
+---
+title: "Budweiser Case Study"
+author: "Ravi Sivaraman"
+date: "7/4/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Craft Beers and Breweries
+An analysis of 2410 US craft beers and 558 breweries across United States. 
+Budweiser CFO presented  dataset of 2410 US craft beers and 558 breweries  to us to analyze and find interesting data report that may be intersting prospect for Budweiser. 
+We did an analysis of the beers and breweries dataset, and found lot of useful information that is benefitial to Budweiser. 
+
+
+```{r include=FALSE}
+library(dplyr)
+library(ggplot2)
+library(readr)
+library(knitr)
+library(kableExtra)
+library(tidyr)
+```
+
+## Import Data
+
+The section imports the data into R
+
+```{r  echo=TRUE}
+breweries <- read.csv("Breweries.csv")
+beers <- read.csv("Beers.csv")
+```
+
+## 1 Breweries by State
+
+```{r  echo=TRUE}
+#-------------------------------------------------------------------------
+#The following section of the code loads the breweries and selects only
+#the State column.
+#group by, groups the breweries by state
+#summarize, adds the count of breweries by state
+#brewbystate contains a dataframe that has State and number of breweries in that state
+#-------------------------------------------------------------------------
+
+brewbystate <- breweries %>% select(State) %>% group_by(State) %>% summarize(Count=n())
+
+brewbystate <- brewbystate[order(brewbystate$Count, decreasing = TRUE),]
+brewbystate$State = factor(brewbystate$State, levels = brewbystate$State[order(brewbystate$Count, decreasing = TRUE)])
+```
+
+The following list containst the list of breweries in United States by State.
+
+```{r  echo=TRUE}
+#This is to generate the table
+kable(brewbystate) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "responsive"), full_width = F, position="left")
+```
+
+```{r  echo=TRUE}
+#This is to plot
+brewbystate %>%ggplot(aes(x=State,y=Count)) + geom_col(color="darkorange", fill="orange") + xlab("State") + ylab("Number of Breweries") + ggtitle("Count of Breweries By State") + theme(axis.text.x = element_text(angle = 90)) + geom_text(aes(label=Count, color="yellow"), vjust=-.5, size=3)
+```
+
+## 2 Merge Breweries and Brews data
+```{r  echo=TRUE}
+colnames(breweries)[1] = "Brewery_id"
+brewandbeers = merge(breweries, beers, by ="Brewery_id")
+colnames(brewandbeers)[1] = "ID"
+colnames(brewandbeers)[2] = "Brewery"
+colnames(brewandbeers)[5] = "Beer"
+kable(brewandbeers[1:6,]) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "responsive"), full_width = F, position="left")
+kable(tail(brewandbeers, keepnums = FALSE)) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "responsive"), full_width = F, position="left")
+```
+
+## 3 Missing Values
+There were 2,410 records missing values. 
+1,005 were missing either IBU or ABV values so we populated these with min value as their respective median.
+We are interested in median, so the value doesn't affect the median very much.
+
+```{r  echo=TRUE}
+#Replace NA with minimum value of ABV and IBU respectively.
+minABV = min(brewandbeers$ABV, na.rm = TRUE)
+brewandbeers <- brewandbeers %>% mutate(ABV=replace_na(ABV,minABV))
+
+minIBU = min(brewandbeers$IBU, na.rm = TRUE)
+brewandbeers <- brewandbeers %>% mutate(IBU=replace_na(IBU,minIBU))
+
+```
+
+## 4 Median ABV and IBU by State
+The following list shows the median IBU and ABV by State
+
+```{r  echo=TRUE}
+# Computes the median ABV and median IBU
+#Groups by State
+medianstate<- brewandbeers %>% group_by(State) %>% summarize("Median ABV"=median(ABV), "Median IBU"=median(IBU))
+
+kable(medianstate) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "responsive"), full_width = F, position="left")
+
+#Plot the bar graph
+colnames(medianstate)[2] ="MedianABV"
+medianstateABV <- medianstate[order(medianstate$MedianABV, decreasing = TRUE),]
+medianstateABV$State <- factor(medianstateABV$State, levels = medianstateABV$State[order(medianstateABV$MedianABV, decreasing = TRUE)])
+
+
+medianstateABV %>%ggplot(aes(x=State,y=MedianABV)) + geom_col(color="darkorange", fill="orange") + xlab("State") + ylab("Median ABV") + ggtitle("Median ABV by State") + theme(axis.text.x = element_text(angle = 90)) + geom_text(aes(label=MedianABV), hjust=-.4, size=2.2) +   coord_flip()
+
+```
+
+Median IBU by State
+```{r  echo=TRUE}
+
+colnames(medianstate)[2] ="MedianIBU"
+medianstateIBU <- medianstate[order(medianstate$MedianIBU, decreasing = TRUE),]
+medianstateIBU$State <- factor(medianstateIBU$State, levels = medianstateIBU$State[order(medianstateIBU$MedianIBU, decreasing = TRUE)])
+
+
+medianstateIBU %>%ggplot(aes(x=State,y=MedianIBU)) + geom_col(color="darkorange", fill="orange") + xlab("State") + ylab("Median IBU") + ggtitle("Median IBU by State") + theme(axis.text.x = element_text(angle = 90)) + geom_text(aes(label=MedianIBU), hjust=-.4, size=2.2) +   coord_flip()
+```
+
+
+## 5a State With Maximum ABV
+
+```{r  echo=TRUE}
+state <- brewandbeers[which.max(brewandbeers$ABV),][4]
+
+```
+`r state` has the highest ABV beer.
+
+## 5b State With Maximum IBU
+The following State has the maximum IBU beer.
+```{r  echo=TRUE}
+state <- brewandbeers[which.max(brewandbeers$IBU),][4]
+
+```
+`r state` has the highest IBU beer.
+
+## 6 Summary Statistics and distribution of ABV.
+```{r  echo=TRUE}
+#This gets the quantile
+#Display quantile as Table
+abvquantile <- quantile(brewandbeers$ABV)
+kable(abvquantile) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "responsive"), full_width = F, position="left")
+
+#Draw a boxplot to explain the summary statistics
+
+beers %>% ggplot(aes(y=ABV)) + geom_boxplot(fill="orange") + ggtitle("Summary Statistics of ABV Beer")
+```
+
+From the summary statistics, we find most of the beer ABV is between 5% and 6.7%. Interestingly there is one very low ABV beer (may be for recovering alcoholics) and there are a handful in higher ABV, though vast majority of people prefer betwen 5 and 7%.
+
+## 7 ABV v IBU
+Are there any relationship between ABV and IBU? Let us find from the following data:
+```{r  echo=TRUE}
+brewandbeers %>% filter(!is.na(IBU) & !is.na(ABV)) %>% ggplot(aes(x=ABV, y=IBU, color=IBU)) + geom_point()
+```
+
+While most of the beers are between 5% and 6.7% of ABV, and the IBU is under 50. There is some market on higher alcohol and higher IBU of 6% to 10% of ABV and 50 an 100 IBU. There is an linear relationship between ABV and IBU, which suggests people prefer a more balanced beer, where ABV and IBU are relatable. There are few beer that doesn't follow the trend. 
+It suggests highest ABV and IBU are still produced, but the market is niche, and also the relationship stays even in very higher ABV vs IBU.
+
+
+
